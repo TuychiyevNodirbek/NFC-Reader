@@ -109,6 +109,10 @@ fun ScanScreen(
                     Text("Retry")
                 }
             }
+
+            is NfcScanState.NfcUnavailable -> {
+
+            }
         }
     }
 }

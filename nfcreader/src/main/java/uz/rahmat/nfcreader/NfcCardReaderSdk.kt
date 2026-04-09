@@ -1,8 +1,10 @@
 package uz.rahmat.nfcreader
 
 import android.app.Activity
+import android.content.Intent
 import android.nfc.NfcAdapter
 import android.nfc.tech.IsoDep
+import android.provider.Settings
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -11,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 class NfcCardReaderSdk {
 
-    private  val TAG = "NfcCardReaderSdk"
+    private val TAG = "NfcCardReaderSdk"
     private var nfcAdapter: NfcAdapter? = null
     private var activity: Activity? = null
 
@@ -51,11 +53,47 @@ class NfcCardReaderSdk {
         }
     }
 
+    fun isNfcEnabled(): Boolean {
+        val adapter = nfcAdapter
+        return adapter != null && adapter.isEnabled
+    }
+
     fun enableAutoScan(enabled: Boolean) {
         isScanningEnabled = enabled
     }
 
+    fun openNfcSettings() {
+        val activity = activity ?: return
+
+        try {
+            val intent = Intent(Settings.ACTION_NFC_SETTINGS)
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            val intent = Intent(Settings.ACTION_WIRELESS_SETTINGS)
+            activity.startActivity(intent)
+        }
+    }
+
+    fun getNfcStatus(): NfcStatus {
+        val adapter = nfcAdapter
+
+        return when {
+            adapter == null -> NfcStatus.NOT_SUPPORTED
+            !adapter.isEnabled -> NfcStatus.DISABLED
+            else -> NfcStatus.ENABLED
+        }
+    }
+
     fun startScan() {
+        val status = getNfcStatus()
+
+        if (status != NfcStatus.ENABLED) {
+            Log.e(TAG, "NFC not ready: $status")
+
+            _state.value = NfcScanState.NfcUnavailable(status)
+            return
+        }
+
         isScanningEnabled = true
         startInternal()
     }
@@ -66,8 +104,8 @@ class NfcCardReaderSdk {
     }
 
     private fun startInternal() {
-        val activity = activity ?: run {
-            Log.e(TAG, "Activity is null")
+        if (getNfcStatus() != NfcStatus.ENABLED) {
+            Log.e(TAG, "startInternal blocked: NFC not enabled")
             return
         }
 
@@ -100,7 +138,7 @@ class NfcCardReaderSdk {
 
                         val result = NfcCardReader.read(isoDep)
 
-                        activity.runOnUiThread {
+                        activity?.runOnUiThread {
                             Log.d(TAG, "Read success: $result")
                             _state.value = NfcScanState.Success(result)
                         }
@@ -108,7 +146,7 @@ class NfcCardReaderSdk {
                     } catch (e: Exception) {
                         Log.e(TAG, "Read error", e)
 
-                        activity.runOnUiThread {
+                        activity?.runOnUiThread {
                             _state.value = NfcScanState.Error(e)
                         }
 
