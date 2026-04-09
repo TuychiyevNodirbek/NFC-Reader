@@ -9,6 +9,8 @@ android {
         version = release(36)
     }
 
+    version = "1.0.0"
+
     defaultConfig {
         minSdk = 24
 
