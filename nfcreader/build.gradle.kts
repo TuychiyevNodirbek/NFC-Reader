@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    `maven-publish`
+
 }
 
 android {
@@ -9,7 +11,7 @@ android {
         version = release(36)
     }
 
-    version = "1.0.1"
+    group = "com.github.TuychiyevNodirbek"
 
     defaultConfig {
         minSdk = 24
@@ -40,4 +42,18 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                from(components["release"])
+
+                groupId = "com.github.TuychiyevNodirbek"
+                artifactId = "nfcreader-sdk"
+                version = "v1.0.1"
+            }
+        }
+    }
 }
